@@ -8,11 +8,9 @@ import jwt
 from django.contrib.auth import get_user_model
 from graphene_django import DjangoObjectType
 
-url = "https://swapi.dev/api/people/"
+base_url = "https://swapi.dev/api/people/"
 headers = {}
 data = {}
-resp = requests.get(url, headers)
-resp = resp.json()
 
 
 def _json_object_hook(d):
@@ -56,13 +54,14 @@ class PeopleType(ObjectType):
     mass = String(description="Persons mass")
     gender = String(description="Persons gender")
     homeworld = String(description="Persons homeworld")
+    # page = String(description="Page")
 
 
 class Query(ObjectType):
     user = Field(UserType, id=Int(required=True))
     self_user = Field(UserType)
     all_user = List(UserType)
-    people = List(PeopleType)
+    people = List(PeopleType, page=Int())
     search = Field(PeopleType, name=String(required=True))
 
     # Return all users
@@ -76,18 +75,30 @@ class Query(ObjectType):
 
 
     # Resolve all people
-    def resolve_people(self, info):
+    def resolve_people(self, info, **args):
+        page = args.get("page")
+        
         user = info.context.user
         if user.is_anonymous:
             raise Exception("Login is required")
+
+        url = f'{base_url}?page={page}'
+        _resp = requests.get(url, headers)
+        resp = _resp.json()
+
         return resp["results"]
         
     # Resolve person
     def resolve_search(self, info, **args):
         name = args.get("name")
+
         user = info.context.user
         if user.is_anonymous:
             raise Exception("Login is required")
+
+        resp = requests.get(base_url, headers)
+        resp = resp.json()
+
         my_item = next((item for item in resp["results"] if item["name"] == name), None)
 
         return my_item

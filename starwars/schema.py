@@ -2,10 +2,11 @@ import json
 from collections import namedtuple
 
 import requests
-from graphene import Field, List, ObjectType, String, Mutation
+from graphene import Field, List, ObjectType, String, Mutation, Int
 import graphql_jwt
 import jwt
 from django.contrib.auth import get_user_model
+from graphene_django import DjangoObjectType
 
 url = "https://swapi.dev/api/people/"
 headers = {}
@@ -24,12 +25,27 @@ def json2obj(data):
 """
 User Type
 """
-class UserType(ObjectType):
-#   class Meta:
-#     model = get_user_model()
-#     fields = ('id','username', 'password')
-    username = String(required=True)
+class UserType(DjangoObjectType):
+  class Meta:
+    model = get_user_model()
+    # fields = ('id','username', 'password')
+    # username = String(required=True)
 
+class CreateUser(Mutation):
+    user = Field(UserType)
+
+    class Arguments:
+        username = String(required=True)
+        password = String(required=True)
+
+    def mutate(self, info, username, password):
+        user = get_user_model()(
+            username=username
+        )
+
+        user.set_password(password)
+        user.save()
+        return CreateUser(user=user)
 """
 People Type
 """
@@ -43,37 +59,43 @@ class PeopleType(ObjectType):
 
 
 class Query(ObjectType):
+    user = Field(UserType, id=Int(required=True))
+    self_user = Field(UserType)
+    all_user = List(UserType)
     people = List(PeopleType)
     search = Field(PeopleType, name=String(required=True))
 
+    # Return all users
+    def resolve_all_user(self, info, **kwargs):
+        user_qs = get_user_model().objects.all()
+        return user_qs
+
+    #Resolve one user
+    def resolve_user(self, info, id):
+            return get_user_model().objects.get(id=id)
+
+
     # Resolve all people
-    def resolve_people(self, info, search=None, **kwargs):
-        # user = info.context.user
-        # if user.is_anonymous:
-        #     raise Exception("Login is required")
+    def resolve_people(self, info):
+        user = info.context.user
+        if user.is_anonymous:
+            raise Exception("Login is required")
         return resp["results"]
         
     # Resolve person
     def resolve_search(self, info, **args):
+        name = args.get("name")
         user = info.context.user
         if user.is_anonymous:
             raise Exception("Login is required")
-        name = args.get("name")
         my_item = next((item for item in resp["results"] if item["name"] == name), None)
 
         return my_item
 
-class AuthMutation(Mutation):
-    token = String()
-    class Arguments:
-        username = String()
-
-    def mutate(self, info , username):
-        user = {"username" : username}
-
-        jwt_token = jwt.encode(user, "secret", algorithm="HS256")
-        res = AuthMutation(token = jwt_token.decode("utf-8"))
-        return res
-
 class Mutation(ObjectType):
-    token_auth = AuthMutation.Field()
+    create_user = CreateUser.Field()
+    
+    # jwt authentication
+    token_auth = graphql_jwt.ObtainJSONWebToken.Field()
+    verify_token = graphql_jwt.Verify.Field()
+    refresh_token = graphql_jwt.Refresh.Field()

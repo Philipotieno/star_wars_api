@@ -75,7 +75,7 @@ class Query(ObjectType):
 
     # Resolve all people
     def resolve_people(self, info, **args):
-        page = args.get("page")
+        page = args.get("page", 1)
 
         user = info.context.user
         if user.is_anonymous:

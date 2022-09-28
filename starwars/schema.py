@@ -4,7 +4,6 @@ from collections import namedtuple
 import requests
 from graphene import Field, List, ObjectType, String, Mutation, Int
 import graphql_jwt
-import jwt
 from django.contrib.auth import get_user_model
 from graphene_django import DjangoObjectType
 
@@ -77,7 +76,7 @@ class Query(ObjectType):
     # Resolve all people
     def resolve_people(self, info, **args):
         page = args.get("page")
-        
+
         user = info.context.user
         if user.is_anonymous:
             raise Exception("Login is required")

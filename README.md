@@ -9,6 +9,19 @@
    ```
       python -m venv venv
    ```
+3. ### Create a .env file and set variables as in the .env-example
+
+4. ### Create postgres database
+ ```
+  $ psql postgres
+  postgres=# CREATE USER your-user WITH PASSWORD 'your-password';
+  postgres=# ALTER ROLE your-user SET client_encoding TO 'utf8';
+  postgres=# ALTER ROLE your-user SET default_transaction_isolation TO 'read committed';
+  postgres=# ALTER ROLE your-user SET timezone TO 'UTC';
+  postgres=# CREATE DATABASE your-database-name;
+  postgres=# GRANT ALL PRIVILEGES ON DATABASE your-database-name TO your-user;
+  postgres=# \q
+ ```
 3. ### Install dependencies
    ```
       pip insatll -r requirements.txt
@@ -28,7 +41,6 @@
 7. ### Test Using Postman
    ```http://127.0.0.1:8000/graphql/```
 - Import the following Collection: [https://www.getpostman.com/collections/8e4608cd2283e03f96a2](https://www.getpostman.com/collections/8e4608cd2283e03f96a2)
- 
 
 ## Screenshots
 
